@@ -182,7 +182,7 @@ class RatingResponseModel(BaseModel):
     text_rating: str
     user_id: int
     image_id: int
-    created_at: datetime
+    created_at: Optional[datetime]
     updated_at: Optional[datetime]
 
     class Config:

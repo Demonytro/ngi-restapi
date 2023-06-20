@@ -39,18 +39,21 @@ async def create_rating(body: RatingRequestModel, image_id: int, db: Session = D
 @router.get("/{image_id}", response_model=List[RatingResponseModel])
 # @has_role(allowed_put_comments)
 async def get_image_rating(image_id: int, db: Session = Depends(get_db)):
-    image_r = db.query(Image).filter(Image.id == image_id)
+    image_r = db.query(Image).filter(Image.id == image_id).first()
     if image_r is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Image not found!')
     list_rating = db.query(Rating).filter(Rating.image_id == image_id).all()
     return list_rating
 
 
-@router.get("/{user_id}", response_model=List[RatingResponseModel])
+@router.get("/users/{user_id}", response_model=List[RatingResponseModel])
 # @has_role(allowed_put_comments)
 async def get_user_rating(user_id: int, db: Session = Depends(get_db)):
-    list_rating = db.query(Rating).filter(Rating.user_id == user_id).all()
-    return list_rating
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User not found!')
+    list_rating_users = db.query(Rating).filter(Rating.user_id == user_id).all()
+    return list_rating_users
 
 
 @router.delete("/{rating_id}")
