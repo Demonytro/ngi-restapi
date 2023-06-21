@@ -32,7 +32,7 @@ async def create_rating(body: RatingRequestModel, image_id: int, db: Session = D
     db.add(new_rating)
     db.commit()
     db.refresh(new_rating)
-    await calculate_total_rating(image_id=image_id, db=db, user_id=current_user.id)
+    await calculate_total_rating(image_id=image_id, db=db)
     return new_rating
 
 
@@ -56,7 +56,7 @@ async def get_user_rating(user_id: int, db: Session = Depends(get_db)):
     return list_rating_users
 
 
-@router.delete("/{rating_id}")
+@router.delete("/")
 # @has_role(allowed_put_comments)
 async def delete_rating(image_id: int, user_id: int, db: Session = Depends(get_db)):
     new_rating = db.query(Rating).filter(and_(Rating.image_id == image_id, Rating.user_id == user_id)).first()
@@ -64,3 +64,4 @@ async def delete_rating(image_id: int, user_id: int, db: Session = Depends(get_d
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Rating not found!')
     db.delete(new_rating)
     db.commit()
+    await calculate_total_rating(image_id=image_id, db=db)
