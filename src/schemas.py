@@ -36,7 +36,6 @@ class ImageResponse(BaseModel):
     image: str
     description: str
     tags: conlist(constr(max_length=50), min_items=1, max_items=5) = []
-    # comments: List[str] = []
     rating: Optional[int]
 
     # возможно стоит тут добавить поле rating если да то и в search_filtering тоже
@@ -212,6 +211,16 @@ class CommentUpdate(CommentModel):
 
     class Config:
         orm_mode = True
+
+
+class ImageWithCreatedAtResponse(BaseModel):
+    id: int
+    image: str
+    description: str
+    tags: conlist(constr(max_length=50), min_items=1, max_items=5) = []
+    rating: Optional[int]
+    created_at: datetime
+
 
 # class CommentModel(BaseModel):
 #     id: int

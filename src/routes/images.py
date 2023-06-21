@@ -2,13 +2,14 @@ import cloudinary.uploader
 from typing import List
 
 from fastapi import APIRouter, HTTPException, Depends, Query, UploadFile, File
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from starlette import status
 
 from src.schemas import ImageResponse, ImageUpdateDescriptionRequest, ImageUpdateTagsRequest
 from src.conf.config import settings, config_cloudinary
 from src.database.db import get_db
-from src.database.models import Image, Tag, User, UserRole
+from src.database.models import Image, Tag, User, Rating
 from src.services.auth import auth_service
 from src.services.auth_decorators import has_role
 from src.database.models import allowed_get_comments, allowed_post_comments, allowed_put_comments, \
@@ -87,13 +88,13 @@ async def update_image_image(image_id: int, image_data: UploadFile = File(...), 
         image.image = image_url
 
         db.commit()
-
+        rating = db.query(func.avg(Rating.numbers_rating)).filter(Rating.image_id == image.id).scalar()
         return ImageResponse(
             id=image.id,
             image=image.image,
             description=image.description,
             tags=[tag.name for tag in image.tags],
-            comments=[comment.content for comment in image.comments]
+            rating=rating
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -121,13 +122,13 @@ async def update_image_tags(
 
         db.commit()
         db.refresh(image)
-
+        rating = db.query(func.avg(Rating.numbers_rating)).filter(Rating.image_id == image.id).scalar()
         return ImageResponse(
             id=image.id,
             image=image.image,
             description=image.description,
             tags=[tag.name for tag in image.tags],
-            comments=[comment.content for comment in image.comments]
+            rating=rating
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -145,13 +146,13 @@ async def update_image_description(image_id: int, description: ImageUpdateDescri
         image.description = description.description
         db.commit()
         db.refresh(image)
-        print("---------------------- обновляет, значит ошибка в return---------------------------------------")
-
+        rating = db.query(func.avg(Rating.numbers_rating)).filter(Rating.image_id == image.id).scalar()
         return ImageResponse(
+            id=image.id,
             image=image.image,
-            description=image.description
-            # tags=[tag.name for tag in image.tags],
-            # comments=[comment.content for comment in image.comments]
+            description=image.description,
+            tags=[tag.name for tag in image.tags],
+            rating=rating
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -164,13 +165,13 @@ async def get_image(image_id: int, db: Session = Depends(get_db)):
         image = db.query(Image).filter(Image.id == image_id).first()
         if not image:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image not found")
-
+        rating = db.query(func.avg(Rating.numbers_rating)).filter(Rating.image_id == image.id).scalar()
         return ImageResponse(
             id=image.id,
             image=image.image,
             description=image.description,
             tags=[tag.name for tag in image.tags],
-            comments=[comment.content for comment in image.comments]
+            rating=rating
         )
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
@@ -186,12 +187,13 @@ async def get_images_by_tags(tags: List[str] = Query(...), db: Session = Depends
 
         image_responses = []
         for image in filtered_images:
+            rating = db.query(func.avg(Rating.numbers_rating)).filter(Rating.image_id == image.id).scalar()
             image_responses.append(ImageResponse(
                 id=image.id,
                 image=image.image,
                 description=image.description,
                 tags=[tag.name for tag in image.tags],
-                # comments=[comment.content for comment in image.comments]
+                rating=rating
             ))
 
         return image_responses
