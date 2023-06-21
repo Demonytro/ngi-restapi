@@ -8,7 +8,8 @@ from starlette import status
 from src.schemas import ImageResponse, ImageUpdateDescriptionRequest, ImageUpdateTagsRequest
 from src.conf.config import settings, config_cloudinary
 from src.database.db import get_db
-from src.database.models import Image, Tag
+from src.database.models import Image, Tag, User, UserRole
+from src.services.auth import auth_service
 from src.services.auth_decorators import has_role
 from src.database.models import allowed_get_comments, allowed_post_comments, allowed_put_comments, \
     allowed_delete_comments
@@ -20,7 +21,7 @@ router = APIRouter(prefix="/images", tags=["images"])
 @router.post("/", response_model=ImageResponse)
 # @has_role(allowed_get_comments)
 async def create_image(image: UploadFile = File(...), description: str = None, tags: List[str] = [],
-                       db: Session = Depends(get_db)):
+                       db: Session = Depends(get_db), current_user: User = Depends(auth_service.get_current_user)):
     try:
         config_cloudinary()
 
@@ -28,7 +29,7 @@ async def create_image(image: UploadFile = File(...), description: str = None, t
 
         image_url = uploaded_image['secure_url']
 
-        image = Image(image=image_url, description=description)
+        image = Image(image=image_url, description=description, user_id=current_user.id)
 
         for tag_data in tags:
             tag = db.query(Tag).filter_by(name=tag_data).first()
@@ -144,12 +145,13 @@ async def update_image_description(image_id: int, description: ImageUpdateDescri
         image.description = description.description
         db.commit()
         db.refresh(image)
+        print("---------------------- обновляет, значит ошибка в return---------------------------------------")
 
         return ImageResponse(
             image=image.image,
-            description=image.description,
-            tags=[tag.name for tag in image.tags],
-            comments=[comment.content for comment in image.comments]
+            description=image.description
+            # tags=[tag.name for tag in image.tags],
+            # comments=[comment.content for comment in image.comments]
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -189,7 +191,7 @@ async def get_images_by_tags(tags: List[str] = Query(...), db: Session = Depends
                 image=image.image,
                 description=image.description,
                 tags=[tag.name for tag in image.tags],
-                comments=[comment.content for comment in image.comments]
+                # comments=[comment.content for comment in image.comments]
             ))
 
         return image_responses
